@@ -1,0 +1,21 @@
+[project]
+name = "herdr-sound-plugin"
+version = "0.2.0"
+description = "Game-style notification sounds for the Herdr plugin (6 switchable chiptune packs)"
+readme = "README.md"
+authors = [
+    { name = "ezstackai", email = "ezstackai@gmail.com" }
+]
+requires-python = ">=3.13"
+dependencies = [
+    "lameenc>=1.8.4",
+]
+
+[build-system]
+requires = ["uv_build>=0.12.22,<0.13.0"]
+build-backend = "uv_build"
+
+[dependency-groups]
+dev = [
+    "pytest>=9.1.1",
+]

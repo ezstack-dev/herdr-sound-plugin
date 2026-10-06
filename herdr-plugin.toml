@@ -1,0 +1,58 @@
+id = "mario-sound"
+name = "Game Sound"
+version = "0.2.0"
+description = "Game-style notification sounds: bright chime when a task completes, dark tone when it needs attention; 6 switchable game sound packs"
+min_herdr_version = "0.9.3"
+platforms = ["macos"]
+
+# 说明：命令以插件目录为工作目录运行，`command` 是 argv 数组、不经 shell 也不搜 PATH，
+# 所以必须写成 ["bash", "xxx.sh"] 的形式。
+
+# 每次 agent 状态变化都会触发；只有 done / blocked 会发声，其余静默。
+[[events]]
+on = "pane.agent_status_changed"
+command = ["bash", "notify.sh"]
+
+# 查看当前音色包 + 全部可用包
+[[actions]]
+id = "list-sounds"
+title = "List sound packs"
+contexts = ["global"]
+command = ["bash", "switch.sh"]
+
+# 6 组游戏音色包，各一个 action。切换后立即生效（无需重启 herdr）。
+[[actions]]
+id = "use-mario"
+title = "Sound pack: Super Mario"
+contexts = ["global"]
+command = ["bash", "switch.sh"]
+
+[[actions]]
+id = "use-zelda"
+title = "Sound pack: Zelda"
+contexts = ["global"]
+command = ["bash", "switch.sh"]
+
+[[actions]]
+id = "use-sonic"
+title = "Sound pack: Sonic"
+contexts = ["global"]
+command = ["bash", "switch.sh"]
+
+[[actions]]
+id = "use-tetris"
+title = "Sound pack: Tetris"
+contexts = ["global"]
+command = ["bash", "switch.sh"]
+
+[[actions]]
+id = "use-pacman"
+title = "Sound pack: Pac-Man"
+contexts = ["global"]
+command = ["bash", "switch.sh"]
+
+[[actions]]
+id = "use-ff"
+title = "Sound pack: Final Fantasy"
+contexts = ["global"]
+command = ["bash", "switch.sh"]

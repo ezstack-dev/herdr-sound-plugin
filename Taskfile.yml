@@ -1,0 +1,113 @@
+version: "3"
+
+# 项目任务入口。`task` 不带参数会列出全部任务。
+# 约定：`task check` 是提交前必跑的门禁（测试 + 清单校验 + 音效同步检查）。
+
+vars:
+  PLUGIN_ID: mario-sound
+  HERDR: '{{.HERDR | default "herdr"}}'
+
+tasks:
+  default:
+    desc: 列出所有任务
+    silent: true
+    cmds:
+      - task --list-all
+
+  # ---------------------------------------------------------------- 环境
+
+  sync:
+    desc: 同步 Python 依赖（uv）
+    cmds:
+      - uv sync
+
+  # ---------------------------------------------------------------- 音效
+
+  list:
+    desc: 列出所有音色包
+    cmds:
+      - uv run python -m herdr_sound_plugin.gen --list
+
+  sounds:
+    desc: 重新生成全部音效 mp3 到 ./sounds
+    deps: [sync]
+    cmds:
+      - uv run python -m herdr_sound_plugin.gen sounds
+
+  check-sounds:
+    desc: 校验已提交的 sounds/ 与生成器输出一致（防止手改 mp3）
+    deps: [sync]
+    cmds:
+      - uv run pytest tests/test_gen.py -q
+
+  # ---------------------------------------------------------------- 质量
+
+  test:
+    desc: 跑单元测试
+    deps: [sync]
+    cmds:
+      - uv run pytest -q
+
+  check:
+    desc: 提交前门禁：测试 + 清单一致性 + 音效同步
+    deps: [test]
+    cmds:
+      - uv run python -c "import tomllib,pathlib;m=tomllib.loads(pathlib.Path('herdr-plugin.toml').read_text());print('manifest ok:', m['id'], m['version'])"
+      - task: check-sounds
+
+  # ---------------------------------------------------------------- 插件
+
+  link:
+    desc: 把本仓库作为本地插件 link 进 herdr
+    cmds:
+      - '{{.HERDR}} plugin link "{{.ROOT_DIR}}"'
+      - '{{.HERDR}} plugin list'
+
+  unlink:
+    desc: 从 herdr 卸载本插件
+    cmds:
+      - '{{.HERDR}} plugin unlink {{.PLUGIN_ID}}'
+
+  relink:
+    desc: 改动清单后刷新插件（unlink + link）
+    cmds:
+      - task: unlink
+      - task: link
+
+  packs:
+    desc: 列出插件在当前 herdr 里注册的音色包 action
+    cmds:
+      - '{{.HERDR}} plugin action list --plugin {{.PLUGIN_ID}}'
+
+  use:
+    desc: 切换音色包（示例：task use PACK=zelda）
+    requires:
+      vars: [PACK]
+    cmds:
+      - '{{.HERDR}} plugin action invoke {{.PLUGIN_ID}}.use-{{.PACK}}'
+
+  logs:
+    desc: 查看插件最近的执行日志
+    cmds:
+      - '{{.HERDR}} plugin log list --plugin {{.PLUGIN_ID}}'
+
+  # ---------------------------------------------------------------- 调试
+
+  capture:
+    desc: 采样 afplay 播放记录（示例：task capture -- --seconds 20）
+    deps: [sync]
+    cmds:
+      - uv run python -m herdr_sound_plugin.capture {{.CLI_ARGS}}
+
+  e2e:
+    desc: 端到端验证每个音色包真的响了（需要 herdr 在跑）
+    deps: [sync]
+    cmds:
+      - uv run python -m herdr_sound_plugin.e2e {{.CLI_ARGS}}
+
+  notes:
+    desc: 查看某个包已提交音效的时长（示例：task notes PACK=mario）
+    requires:
+      vars: [PACK]
+    cmds:
+      - uv run python -c "from herdr_sound_plugin import packs,synth; [print(k, f'{synth.duration(synth.render(packs.notes_of(\"{{.PACK}}\",k))):.2f}s', packs.notes_of('{{.PACK}}',k)) for k in packs.KINDS]"
