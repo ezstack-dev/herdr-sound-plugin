@@ -185,7 +185,7 @@ first — the workflow refuses to publish if the tag and the version disagree.
 
 ```bash
 # bump "version" in pyproject.toml, then:
-git tag v1.0.2 && git push --tags
+git tag v1.0.3 && git push --tags
 ```
 
 `.github/workflows/release.yml` then runs the tests, builds, publishes via PyPI
