@@ -94,8 +94,8 @@ task e2e -- --packs mario tetris
 输出形如：
 
 ```
-✓ mario    状态=done     采样命中 25 次  期望 sounds/mario/done.mp3
-✓ tetris   状态=done     采样命中 26 次  期望 sounds/tetris/done.mp3
+✓ mario    status=done     hits= 25  expected sounds/mario/done.mp3
+✓ tetris   status=done     hits= 26  expected sounds/tetris/done.mp3
 ```
 
 也可以就跑一个真实的 agent 任务到结束，然后看日志：

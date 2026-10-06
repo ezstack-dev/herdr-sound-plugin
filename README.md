@@ -94,8 +94,8 @@ task e2e -- --packs mario tetris
 Output looks like:
 
 ```
-✓ mario    状态=done     采样命中 25 次  期望 sounds/mario/done.mp3
-✓ tetris   状态=done     采样命中 26 次  期望 sounds/tetris/done.mp3
+✓ mario    status=done     hits= 25  expected sounds/mario/done.mp3
+✓ tetris   status=done     hits= 26  expected sounds/tetris/done.mp3
 ```
 
 Or just run any agent task to completion and check the log:
