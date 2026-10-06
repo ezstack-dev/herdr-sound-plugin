@@ -5,6 +5,16 @@ description = "Switch Herdr notification sounds between game-style chiptune pack
 readme = "README.md"
 license = "Apache-2.0"
 license-files = ["LICENSE"]
+# 纯 Python，三个平台都用；显式声明以便 PyPI 索引页显示对应分类。
+classifiers = [
+    "Environment :: MacOS X",
+    "Environment :: Win32 (MS Windows)",
+    "Environment :: X11 Applications",
+    "Operating System :: MacOS",
+    "Operating System :: Microsoft :: Windows",
+    "Operating System :: POSIX :: Linux",
+    "Programming Language :: Python :: 3",
+]
 authors = [
     { name = "ezstackai", email = "ezstackai@gmail.com" }
 ]

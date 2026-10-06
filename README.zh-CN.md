@@ -65,6 +65,28 @@ uv tool install .
 
 ---
 
+## 支持平台
+
+CLI 本身是纯 Python，Herdr 能跑的平台上都能跑 —— **macOS、Linux、Windows**。
+它只做两件事：读写 `config.toml`、拷贝 mp3。播放完全是 Herdr 自己的活儿。
+
+| | 配置文件 | Herdr 用什么播 mp3 |
+|---|---|---|
+| **macOS** | `~/.config/herdr/config.toml` | `afplay`（系统自带，无需安装） |
+| **Linux** | `~/.config/herdr/config.toml`（或 `$XDG_CONFIG_HOME/herdr`） | `PATH` 里按序找 `paplay` · `pw-play` · `ffplay` · `mpg123` · `mpv`，先找到的用 |
+| **Windows** | `%APPDATA%\herdr\config.toml` | 内置 PowerShell + WPF `MediaPlayer`（Windows PowerShell 5.1 随系统自带） |
+
+Linux 上需要先装五个播放器之一才会出声：`apt install pulseaudio-utils`
+（提供 `paplay`）或 `pipewire-audio`（提供 `pw-play`）基本能覆盖绝大多数发行版。
+一个都没有时 Herdr 会退回内置音并提示 `no audio player available` ——
+配置依然是对的，`hsp doctor` 也会判定为有效。
+
+音效文件本身就是普通 mp3，三个平台都能解码。Windows 上播放依赖 Windows
+PowerShell 5.1 与 WPF 程序集，Win10/11 桌面版都有，但无 GUI 的 Server Core
+可能缺。
+
+---
+
 ## 用法
 
 ```bash
@@ -92,9 +114,10 @@ hsp restore           # 恢复 Herdr 默认（关闭音效、删掉复制进去�
 
 ### 自定义配置路径
 
-`herdr-sound` 找配置的顺序与 Herdr 一致：
-`$HERDR_CONFIG_PATH` → `$XDG_CONFIG_HOME/herdr/config.toml` →
-`~/.config/herdr/config.toml`。可以用 `HERDR_CONFIG_PATH` 指向别的文件：
+`herdr-sound` 找配置的顺序与 Herdr 一致：先看 `$HERDR_CONFIG_PATH`，
+然后是上表里对应平台的默认路径 —— Windows 是 `%APPDATA%\herdr\config.toml`，
+其他平台是 `$XDG_CONFIG_HOME/herdr/config.toml` 或 `~/.config/herdr/config.toml`。
+可以用 `HERDR_CONFIG_PATH` 指向别的文件：
 
 ```bash
 HERDR_CONFIG_PATH=/tmp/test/config.toml hsp use pacman
@@ -132,7 +155,7 @@ task list         # 打印包名与时长
 ```
 src/herdr_sound_plugin/
   cli.py        typer 命令行（list / use / status / doctor / restore / version）
-  config.py     定位、读取、修改 herdr 的 config.toml（tomlkit，保留注释）
+  config.py     定位（区分操作系统）、读取、修改 herdr 的 config.toml（tomlkit，保留注释）
   install.py    复制音效、计算 [ui.sound] 路径、卸载
   herdr.py      薄封装：找 herdr 可执行文件、reload-config
   packs.py      谱子表 —— 每个包每种用途一份「乐谱」

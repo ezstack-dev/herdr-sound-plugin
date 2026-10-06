@@ -67,6 +67,31 @@ Both `herdr-sound` and the short alias `hsp` are installed.
 
 ---
 
+## Platforms
+
+The CLI itself is pure Python and runs anywhere Herdr does — **macOS, Linux and
+Windows**. It only reads and writes `config.toml` and copies mp3 files; audio
+playback is entirely Herdr's job.
+
+| | Config file | How Herdr plays the mp3 |
+|---|---|---|
+| **macOS** | `~/.config/herdr/config.toml` | `afplay` (built in, nothing to install) |
+| **Linux** | `~/.config/herdr/config.toml` (or `$XDG_CONFIG_HOME/herdr`) | first of `paplay` · `pw-play` · `ffplay` · `mpg123` · `mpv` found in `PATH` |
+| **Windows** | `%APPDATA%\herdr\config.toml` | built-in PowerShell + WPF `MediaPlayer` (Windows PowerShell 5.1 ships with Windows — nothing to install) |
+
+On Linux, Herdr only emits sound if one of those five players is installed:
+`apt install pulseaudio-utils` (for `paplay`) or `pipewire-audio` (for `pw-play`)
+covers almost everyone. With none of them you get Herdr's built-in sound and a
+`no audio player available` note — the config is still correct, and `hsp doctor`
+will report it as valid.
+
+The sound files themselves are plain MP3s, so they decode on every platform.
+On Windows, sound needs Windows PowerShell 5.1 and the WPF assemblies — both are
+present on Windows 10/11 desktop, but a GUI-less (Server Core) install may not
+have them.
+
+---
+
 ## Usage
 
 ```bash
@@ -96,9 +121,10 @@ backing it up first is still a good habit.
 ### Custom config location
 
 `herdr-sound` finds your config the same way Herdr does:
-`$HERDR_CONFIG_PATH` → `$XDG_CONFIG_HOME/herdr/config.toml` →
-`~/.config/herdr/config.toml`. Set `HERDR_CONFIG_PATH` to operate on a
-different one:
+`$HERDR_CONFIG_PATH` first, then the per-platform default from the
+[Platforms](#platforms) table above — `%APPDATA%\herdr\config.toml` on Windows,
+`$XDG_CONFIG_HOME/herdr/config.toml` or `~/.config/herdr/config.toml` elsewhere.
+Set `HERDR_CONFIG_PATH` to operate on a different one:
 
 ```bash
 HERDR_CONFIG_PATH=/tmp/test/config.toml hsp use pacman
@@ -139,7 +165,7 @@ Layout:
 ```
 src/herdr_sound_plugin/
   cli.py        typer app (list / use / status / doctor / restore / version)
-  config.py     locate + read + edit herdr's config.toml (tomlkit, keeps comments)
+  config.py     locate (per-OS) + read + edit herdr's config.toml (tomlkit, keeps comments)
   install.py    copy sounds, compute [ui.sound] paths, uninstall
   herdr.py      thin wrapper: find the herdr binary, reload-config
   packs.py      the note tables — one "score" per pack and purpose

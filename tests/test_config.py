@@ -32,6 +32,7 @@ def test_config_path_prefers_env(tmp_path, monkeypatch):
 
 def test_config_path_uses_xdg(tmp_path, monkeypatch):
     monkeypatch.delenv("HERDR_CONFIG_PATH", raising=False)
+    monkeypatch.setattr(cfg.sys, "platform", "linux")
     monkeypatch.setenv("XDG_CONFIG_HOME", str(tmp_path))
     assert cfg.config_path() == tmp_path / "herdr" / "config.toml"
 
@@ -39,13 +40,49 @@ def test_config_path_uses_xdg(tmp_path, monkeypatch):
 def test_config_path_defaults_to_dot_config(tmp_path, monkeypatch):
     monkeypatch.delenv("HERDR_CONFIG_PATH", raising=False)
     monkeypatch.delenv("XDG_CONFIG_HOME", raising=False)
+    monkeypatch.setattr(cfg.sys, "platform", "linux")
     monkeypatch.setattr(cfg.pathlib.Path, "home", classmethod(lambda cls: tmp_path))
     assert cfg.config_path() == tmp_path / ".config" / "herdr" / "config.toml"
+
+
+def test_config_path_on_windows_uses_appdata(tmp_path, monkeypatch):
+    """Windows 上 herdr 读 `%APPDATA%\\herdr`，不读 `~/.config/herdr`。"""
+    monkeypatch.delenv("HERDR_CONFIG_PATH", raising=False)
+    monkeypatch.setattr(cfg.sys, "platform", "win32")
+    monkeypatch.setenv("APPDATA", str(tmp_path / "Roaming"))
+    monkeypatch.setattr(cfg.pathlib.Path, "home", classmethod(lambda cls: tmp_path / "home"))
+    assert cfg.config_path() == tmp_path / "Roaming" / "herdr" / "config.toml"
+
+
+def test_config_path_on_windows_without_appdata(tmp_path, monkeypatch):
+    """APPDATA 缺失时兜底到 `~/AppData/Roaming/herdr`。"""
+    monkeypatch.delenv("HERDR_CONFIG_PATH", raising=False)
+    monkeypatch.delenv("APPDATA", raising=False)
+    monkeypatch.setattr(cfg.sys, "platform", "win32")
+    monkeypatch.setattr(cfg.pathlib.Path, "home", classmethod(lambda cls: tmp_path))
+    assert cfg.config_path() == tmp_path / "AppData" / "Roaming" / "herdr" / "config.toml"
+
+
+def test_config_path_env_wins_on_windows(tmp_path, monkeypatch):
+    """`HERDR_CONFIG_PATH` 在 Windows 上优先级更高。"""
+    monkeypatch.setattr(cfg.sys, "platform", "win32")
+    monkeypatch.setenv("APPDATA", str(tmp_path / "Roaming"))
+    monkeypatch.setenv("HERDR_CONFIG_PATH", str(tmp_path / "custom.toml"))
+    assert cfg.config_path() == tmp_path / "custom.toml"
 
 
 def test_sound_dir_sits_next_to_config(tmp_path, monkeypatch):
     monkeypatch.setenv("HERDR_CONFIG_PATH", str(tmp_path / "config.toml"))
     assert cfg.sound_dir() == tmp_path / "sounds"
+
+
+def test_sound_dir_sits_next_to_config_on_windows(tmp_path, monkeypatch):
+    """Windows 上 sounds/ 跟着 `%APPDATA%\\herdr` 走，而不是 ~/.config。"""
+    monkeypatch.delenv("HERDR_CONFIG_PATH", raising=False)
+    monkeypatch.setattr(cfg.sys, "platform", "win32")
+    monkeypatch.setenv("APPDATA", str(tmp_path / "Roaming"))
+    monkeypatch.setattr(cfg.pathlib.Path, "home", classmethod(lambda cls: tmp_path / "home"))
+    assert cfg.sound_dir() == tmp_path / "Roaming" / "herdr" / "sounds"
 
 
 def test_read_missing_file_is_empty(tmp_path):

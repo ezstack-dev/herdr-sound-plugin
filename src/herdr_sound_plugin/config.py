@@ -19,23 +19,39 @@ from __future__ import annotations
 
 import os
 import pathlib
+import sys
 
 import tomlkit
 
 SECTION = ("ui", "sound")
 
 
+def _config_dir() -> pathlib.Path:
+    """herdr 的配置目录，按平台区分（herdr 官方 agent-guide 的规定）：
+
+    - Linux / macOS：`$XDG_CONFIG_HOME/herdr` > `~/.config/herdr`
+    - Windows：`%APPDATA%\\herdr`（即 `%USERPROFILE%\\AppData\\Roaming\\herdr`）
+    """
+    if sys.platform == "win32":
+        appdata = os.environ.get("APPDATA")
+        if appdata:
+            return pathlib.Path(appdata) / "herdr"
+        return pathlib.Path.home() / "AppData" / "Roaming" / "herdr"
+    xdg = os.environ.get("XDG_CONFIG_HOME")
+    base = pathlib.Path(xdg).expanduser() if xdg else pathlib.Path.home() / ".config"
+    return base / "herdr"
+
+
 def config_path() -> pathlib.Path:
     """定位 herdr 的 config.toml。
 
-    顺序：`HERDR_CONFIG_PATH` 环境变量 > `$XDG_CONFIG_HOME/herdr` > `~/.config/herdr`。
+    顺序：`HERDR_CONFIG_PATH` 环境变量 > 平台默认位置（见 `_config_dir`）。
+    Windows 上**不能**用 `~/.config/herdr` —— herdr 不读那个目录。
     """
     env = os.environ.get("HERDR_CONFIG_PATH")
     if env:
         return pathlib.Path(env).expanduser()
-    xdg = os.environ.get("XDG_CONFIG_HOME")
-    base = pathlib.Path(xdg).expanduser() if xdg else pathlib.Path.home() / ".config"
-    return base / "herdr" / "config.toml"
+    return _config_dir() / "config.toml"
 
 
 def sound_dir(config: "pathlib.Path | None" = None) -> pathlib.Path:
