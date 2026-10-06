@@ -175,7 +175,7 @@ tag 与版本号不一致时工作流会拒绝发布。
 
 ```bash
 # 改 pyproject.toml 的 "version"，然后：
-git tag v1.0.1 && git push --tags
+git tag v1.0.2 && git push --tags
 ```
 
 `.github/workflows/release.yml` 会跑测试、构建、通过 PyPI 可信发布（不往仓库里

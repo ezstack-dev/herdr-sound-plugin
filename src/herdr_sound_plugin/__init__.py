@@ -16,4 +16,10 @@
     gen      把谱子渲染成仓库里的 mp3（开发用）
 """
 
-__version__ = "1.0.0"
+from importlib.metadata import PackageNotFoundError
+from importlib.metadata import version as _package_version
+
+try:
+    __version__ = _package_version("herdr-sound")
+except PackageNotFoundError:  # 没安装（源码目录直接跑）
+    __version__ = "0.0.0+unknown"

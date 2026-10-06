@@ -5,7 +5,7 @@ import pathlib
 import pytest
 from typer.testing import CliRunner
 
-from herdr_sound_plugin import config as cfg
+from herdr_sound_plugin import __version__, config as cfg
 from herdr_sound_plugin import install
 from herdr_sound_plugin.cli import app
 
@@ -26,6 +26,14 @@ def test_help_lists_commands():
     assert result.exit_code == 0
     for command in ("list", "use", "status", "doctor", "restore", "version"):
         assert command in result.stdout
+
+
+def test_version_is_not_a_stale_literal():
+    """版本号只有 pyproject 一处来源；这里挡住硬编码回归。"""
+    major, minor, patch = __version__.split(".")[:3]
+    assert major.isdigit() and minor.isdigit(), __version__
+    assert __version__ != "0.0.0+unknown", "测试环境应能读到已安装的包元数据"
+    assert patch.split("+")[0].isdigit(), __version__
 
 
 def test_list_marks_nothing_when_inactive(env):
@@ -123,7 +131,10 @@ def test_doctor_fails_when_active_pack_files_missing(env, monkeypatch):
     assert result.exit_code == 1
 
 
-def test_version():
+def test_version_matches_distribution_metadata():
+    """`hsp version` 报的版本必须与分发包一致（别再手写第二份版本号）。"""
+    from importlib.metadata import version
+
     result = runner.invoke(app, ["version"])
     assert result.exit_code == 0
-    assert result.stdout.strip() == "1.0.0"
+    assert result.stdout.strip() == version("herdr-sound")

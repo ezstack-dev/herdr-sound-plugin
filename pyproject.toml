@@ -1,6 +1,6 @@
 [project]
 name = "herdr-sound"
-version = "1.0.1"
+version = "1.0.2"
 description = "Switch Herdr notification sounds between game-style chiptune packs"
 readme = "README.md"
 license = "Apache-2.0"
