@@ -34,7 +34,7 @@ tasks:
       - uv run python -m herdr_sound_plugin.gen
 
   check-sounds:
-    desc: 校验已提交的 mp3 与生成器输出一致（防止手改音频）
+    desc: 校验生成流程（目录布局、mp3 合法性、可复现、时长对谱）
     deps: [sync]
     cmds:
       - uv run pytest tests/test_gen.py -q
