@@ -1,5 +1,9 @@
 # herdr-sound
 
+[![PyPI](https://img.shields.io/pypi/v/herdr-sound.svg)](https://pypi.org/project/herdr-sound/)
+[![Python versions](https://img.shields.io/pypi/pyversions/herdr-sound.svg)](https://pypi.org/project/herdr-sound/)
+[![License](https://img.shields.io/pypi/l/herdr-sound.svg)](LICENSE)
+
 Give your [Herdr](https://herdr.dev) agents a game-style notification sound.
 
 `herdr-sound` is a tiny CLI that switches Herdr's **native** notification sounds
@@ -51,7 +55,7 @@ uv tool install herdr-sound
 pip install herdr-sound
 ```
 
-Until the package is on PyPI, install straight from this repo:
+From source, for the latest unreleased changes:
 
 ```bash
 uv tool install --from git+https://github.com/ezstack-dev/herdr-sound-plugin herdr-sound
@@ -147,6 +151,25 @@ packages/legacy-herdr-plugin/   ⚠️ dead code from the old plugin approach
 
 `packages/legacy-herdr-plugin/` is archived, not used, and excluded from test
 collection. See its README if you want the post-mortem.
+
+### Releasing
+
+Pushing a `v*` tag publishes to PyPI. Bump the version in `pyproject.toml`
+first — the workflow refuses to publish if the tag and the version disagree.
+
+```bash
+# bump "version" in pyproject.toml, then:
+git tag v1.0.1 && git push --tags
+```
+
+`.github/workflows/release.yml` then runs the tests, builds, publishes via PyPI
+trusted publishing (no token stored in the repo), and opens a GitHub Release.
+
+**One-time setup:** add a trusted publisher on PyPI at
+https://pypi.org/manage/project/herdr-sound/settings/publishing/ with
+`Owner = ezstack-dev`, `Repository = herdr-sound-plugin`,
+`Workflow = release.yml`, `Environment = pypi`. Until that exists the publish
+step fails with a permissions error.
 
 ---
 

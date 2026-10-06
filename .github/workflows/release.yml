@@ -1,0 +1,49 @@
+name: release
+
+on:
+  push:
+    tags: ["v*"]
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    environment: pypi
+    permissions:
+      id-token: write # PyPI 可信发布（OIDC）需要
+      contents: write # 建 GitHub Release 需要
+    steps:
+      - uses: actions/checkout@v7.0.1
+
+      - uses: astral-sh/setup-uv@v10.2.0
+        with:
+          enable-cache: true
+
+      - name: 校验 tag 与 pyproject 版本一致
+        run: |
+          tag="${GITHUB_REF_NAME#v}"
+          ver=$(uv run --no-project python -c \
+            "import tomllib,pathlib;print(tomllib.loads(pathlib.Path('pyproject.toml').read_text())['project']['version'])")
+          echo "tag=$tag version=$ver"
+          [ "$tag" = "$ver" ] || { echo "::error::tag $GITHUB_REF_NAME 与 pyproject 版本 $ver 不一致"; exit 1; }
+
+      - run: uv sync --dev
+      - run: uv run pytest -q
+
+      - name: 构建并确认音效已打包
+        run: |
+          uv build
+          uv run python -c "
+          import glob, zipfile
+          wheel = sorted(glob.glob('dist/*.whl'))[-1]
+          sounds = [n for n in zipfile.ZipFile(wheel).namelist() if n.endswith('.mp3')]
+          assert len(sounds) == 12, f'预期 12 个 mp3（6 包 x 2 类），实际 {len(sounds)}'
+          print(f'{wheel}: {len(sounds)} 个 mp3 已打包')
+          "
+
+      - name: 发布到 PyPI
+        uses: pypa/gh-action-pypi-publish@release/v1
+
+      - name: 建 GitHub Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh release create "$GITHUB_REF_NAME" dist/* --generate-notes

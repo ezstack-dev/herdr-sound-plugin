@@ -1,5 +1,9 @@
 # herdr-sound
 
+[![PyPI](https://img.shields.io/pypi/v/herdr-sound.svg)](https://pypi.org/project/herdr-sound/)
+[![Python versions](https://img.shields.io/pypi/pyversions/herdr-sound.svg)](https://pypi.org/project/herdr-sound/)
+[![License](https://img.shields.io/pypi/l/herdr-sound.svg)](LICENSE)
+
 给你的 [Herdr](https://herdr.dev) Agent 换一套游戏风格提示音。
 
 `herdr-sound` 是个很小的命令行工具，用 Herdr **自带的**音效配置在几套 chiptune
@@ -49,7 +53,7 @@ uv tool install herdr-sound
 pip install herdr-sound
 ```
 
-在发布到 PyPI 之前，可以直接从本仓库安装：
+想用尚未发布的最新改动，可从源码装：
 
 ```bash
 uv tool install --from git+https://github.com/ezstack-dev/herdr-sound-plugin herdr-sound
@@ -140,6 +144,23 @@ packages/legacy-herdr-plugin/   ⚠️ 旧插件方案的死代码
 
 `packages/legacy-herdr-plugin/` 是归档，不再使用，且已排除出测试收集。
 想看当年的复盘请读它自己的 README。
+
+### 发布
+
+推一个 `v*` 的 tag 就会发布到 PyPI。**先改 `pyproject.toml` 里的版本号** ——
+tag 与版本号不一致时工作流会拒绝发布。
+
+```bash
+# 改 pyproject.toml 的 "version"，然后：
+git tag v1.0.1 && git push --tags
+```
+
+`.github/workflows/release.yml` 会跑测试、构建、通过 PyPI 可信发布（不往仓库里
+存 token）上传，并建一个 GitHub Release。
+
+**一次性设置：** 到 https://pypi.org/manage/project/herdr-sound/settings/publishing/
+添加一个 trusted publisher，填 `Owner = ezstack-dev`、`Repository = herdr-sound-plugin`、
+`Workflow = release.yml`、`Environment = pypi`。不配这一步，发布步骤会以权限错误失败。
 
 ---
 
