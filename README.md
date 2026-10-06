@@ -105,9 +105,11 @@ herdr plugin log list --plugin mario-sound
 # every trigger records one entry with status=succeeded
 ```
 
-> ⚠️ `herdr pane report-agent ... --state blocked` **does not** trigger this hook — it sets a
-> status snapshot rather than emitting a state *change*, so a bare `report-agent` (with no
-> real agent in that pane) produces no plugin event. Use `task e2e` to exercise the hook.
+> ⚠️ `herdr pane report-agent` does emit `pane.agent_status_changed`, with two caveats:
+> it is **ignored on a pane that already runs an agent** (only a bare shell pane can be
+> forced to `blocked`), and re-reporting the **same** state emits nothing — a state must
+> actually *change*. So reset to `idle` before re-forcing `blocked`. `done` cannot be faked
+> at all (`--state` only accepts `idle|working|blocked|unknown`); run `task e2e` instead.
 
 ## How it works
 

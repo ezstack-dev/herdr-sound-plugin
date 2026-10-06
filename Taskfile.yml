@@ -100,7 +100,11 @@ tasks:
       - uv run python -m herdr_sound_plugin.capture {{.CLI_ARGS}}
 
   e2e:
-    desc: 端到端验证每个音色包真的响了（需要 herdr 在跑）
+    desc: >-
+      End-to-end check that each sound pack really plays (needs herdr running).
+      NOTE: starts a real pi agent in a throwaway workspace and moves afplay
+      sampling; the blocked pass leaves a non-real blocked state behind.
+      Throwaway workspace only.
     deps: [sync]
     cmds:
       - uv run python -m herdr_sound_plugin.e2e {{.CLI_ARGS}}

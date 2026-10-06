@@ -37,8 +37,9 @@ def sample() -> "list[str]":
     return lines
 
 
-def files(log: pathlib.Path) -> "dict[str, int]":
+def files(log: "str | pathlib.Path") -> "dict[str, int]":
     """从采样日志里统计各音效文件被播放的次数。"""
+    log = pathlib.Path(log)
     counts: dict[str, int] = {}
     if not log.exists():
         return counts
@@ -50,12 +51,13 @@ def files(log: pathlib.Path) -> "dict[str, int]":
     return counts
 
 
-def watch(log: pathlib.Path = DEFAULT_LOG, interval: float = 0.03,
+def watch(log: "str | pathlib.Path" = DEFAULT_LOG, interval: float = 0.03,
           seconds: "float | None" = None) -> int:
     """高频采样 `interval` 秒一次，把命中追加进 `log`；`seconds=None` 表示一直跑。
 
     返回捕获到的总条数（仅当 `seconds` 有限时才有意义）。
     """
+    log = pathlib.Path(log)
     log.parent.mkdir(parents=True, exist_ok=True)
     deadline = None if seconds is None else time.monotonic() + seconds
     hits = 0

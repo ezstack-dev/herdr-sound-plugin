@@ -105,9 +105,11 @@ herdr plugin log list --plugin mario-sound
 # 每次触发都会记一条 status=succeeded
 ```
 
-> ⚠️ `herdr pane report-agent ... --state blocked` **不会**触发本钩子——它只是设置一个状态快照，
-> 而不是发出状态*变化*，所以对一个没有真 agent 的 pane 直接 report-agent 不产生任何插件事件。
-> 要验证钩子请用 `task e2e`。
+> ⚠️ `herdr pane report-agent` 确实会发出 `pane.agent_status_changed`，但有两个前提：
+> 对**已经在跑 agent 的 pane 会被忽略**（只有一个空 shell pane 才能被强制成 `blocked`），
+> 且**重复上报同一个状态不产生任何事件**——状态必须真的发生*变化*。所以再次强制
+> `blocked` 前要先复位成 `idle`。`done` 完全无法伪造（`--state` 只接受
+> `idle|working|blocked|unknown`），要验证请用 `task e2e`。
 
 ## 工作原理
 

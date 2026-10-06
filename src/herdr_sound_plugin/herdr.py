@@ -48,9 +48,11 @@ def call(*args: str, binary: "str | None" = None, timeout: float = 30.0) -> dict
     """执行 `herdr <args...>` 并解析其 JSON 输出。
 
     herdr 的 CLI 一律返回 `{"id":..., "result":{...}}` 信封；出错时进程非零退出。
+    参数统一 str 化，免得调用处把 `--limit 200` 写成 int 导致 subprocess 报错。
     """
     exe = binary or resolve_binary()
-    proc = subprocess.run([exe, *args], capture_output=True, text=True, timeout=timeout)
+    proc = subprocess.run([exe, *map(str, args)], capture_output=True, text=True,
+                          timeout=timeout)
     if proc.returncode != 0:
         raise RuntimeError(f"herdr {' '.join(args)} 失败({proc.returncode}): "
                            f"{proc.stderr.strip() or proc.stdout.strip()}")
@@ -90,8 +92,12 @@ def use_pack(pack: str, **kw) -> dict:
 
 
 def plugin_logs(limit: int = 20, **kw) -> "list[dict]":
-    """读插件执行日志（最近 `limit` 条）。"""
-    data = call("plugin", "log", "list", "--plugin", PLUGIN_ID, **kw)
+    """读插件执行日志（最近 `limit` 条，按时间正序）。
+
+    herdr 侧默认只回最近 50 条，所以必须把 `--limit` 一起传下去；
+    否则请求 80 条实际还是只拿到 50 条，靠日志条数做前后对比就会失真。
+    """
+    data = call("plugin", "log", "list", "--plugin", PLUGIN_ID, "--limit", limit, **kw)
     return data.get("result", {}).get("logs", [])[-limit:]
 
 
