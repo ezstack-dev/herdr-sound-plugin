@@ -1,9 +1,9 @@
 """生成音色包 mp3 文件。
 
 用法（推荐走 Taskfile）：
-    uv run python -m herdr_sound_plugin.gen            # 生成到 ./sounds
-    uv run python -m herdr_sound_plugin.gen out        # 生成到 ./out
-    uv run python -m herdr_sound_plugin.gen --list     # 只列出音色包
+    uv run python -m herdr_sound_plugin.gen                          # 生成到包内 sounds/
+    uv run python -m herdr_sound_plugin.gen out                       # 生成到 ./out
+    uv run python -m herdr_sound_plugin.gen --list                    # 只列出音色包
 """
 
 from __future__ import annotations
@@ -49,7 +49,8 @@ def main(argv: "list[str] | None" = None) -> int:
               file=sys.stderr)
         return 2
 
-    out_dir = pathlib.Path(args[0] if args else "sounds")
+    out_dir = pathlib.Path(args[0] if args else
+                           pathlib.Path(__file__).resolve().parent / "sounds")
     for path in generate(out_dir):
         data = path.read_bytes()
         print(f"{path}  {len(data)} bytes")

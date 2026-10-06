@@ -1,21 +1,39 @@
 [project]
-name = "herdr-sound-plugin"
-version = "0.2.0"
-description = "Game-style notification sounds for the Herdr plugin (6 switchable chiptune packs)"
+name = "herdr-sound"
+version = "1.0.0"
+description = "Switch Herdr notification sounds between game-style chiptune packs"
 readme = "README.md"
 authors = [
     { name = "ezstackai", email = "ezstackai@gmail.com" }
 ]
-requires-python = ">=3.13"
+requires-python = ">=3.10"
 dependencies = [
-    "lameenc>=1.8.4",
+    "typer>=0.12",
+    "tomlkit>=0.12",
 ]
+
+[project.urls]
+Homepage = "https://github.com/ezstack-dev/herdr-sound-plugin"
+
+[project.scripts]
+herdr-sound = "herdr_sound_plugin.cli:app"
+hsp = "herdr_sound_plugin.cli:app"
 
 [build-system]
 requires = ["uv_build>=0.12.22,<0.13.0"]
 build-backend = "uv_build"
 
+# 项目名（herdr-sound）与包目录名（herdr_sound_plugin）不同，必须显式声明，
+# 否则 uv_build 会去找 src/herdr_sound/。
+[tool.uv.build-backend]
+module-name = "herdr_sound_plugin"
+
 [dependency-groups]
 dev = [
     "pytest>=9.1.1",
+    "lameenc>=1.8.4",
 ]
+
+# 归档代码在 packages/legacy-herdr-plugin/ 下（已失效），不参与收集。
+[tool.pytest.ini_options]
+testpaths = ["tests"]

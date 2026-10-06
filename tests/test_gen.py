@@ -45,8 +45,9 @@ def test_generated_duration_matches_score(tmp_path: pathlib.Path):
 
 
 def test_committed_sounds_match_generator(tmp_path: pathlib.Path):
-    """仓库里已提交的 sounds/ 必须与生成器的输出一致（防止手改 mp3）。"""
-    repo_sounds = pathlib.Path(__file__).resolve().parents[1] / "sounds"
+    """包内已提交的 sounds/ 必须与生成器的输出一致（防止手改 mp3）。"""
+    repo_sounds = (pathlib.Path(__file__).resolve().parents[1]
+                   / "src" / "herdr_sound_plugin" / "sounds")
     if not repo_sounds.exists():
         pytest.skip("仓库里还没有 sounds/ 目录")
     fresh = {p.relative_to(tmp_path): p.read_bytes() for p in generate(tmp_path)}

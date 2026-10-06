@@ -1,197 +1,148 @@
-# herdr-sound-plugin
+# herdr-sound
 
-给 [Herdr](https://herdr.dev) 加上游戏风格的提示音，内置 **6 组可切换的音色包**：
+给你的 [Herdr](https://herdr.dev) Agent 换一套游戏风格提示音。
 
-| Agent 事件 | 音效 | 含义 |
-|---|---|---|
-| 任务**完成**（`done`） | 明亮上行 | 一切正常 |
-| 任务**需要介入**（`blocked`） | 低沉下行 | 需要人工处理 |
+`herdr-sound` 是个很小的命令行工具，用 Herdr **自带的**音效配置在几套 chiptune
+「音色包」之间切换 —— 任务完成一个声、需要你介入另一个声。它不是插件、不起后台
+进程：只是把音频文件复制到你的 Herdr 配置目录旁边，再把 `[ui.sound]` 指过去。
 
-> 🌐 [English README →](README.md)
+```console
+$ hsp use zelda
+  done     -> ~/.config/herdr/sounds/zelda/done.mp3
+  blocked  -> ~/.config/herdr/sounds/zelda/blocked.mp3
+已切换音色包：zelda
+  config: ~/.config/herdr/config.toml
+```
 
-**音色包：** `mario`（默认）· `zelda` · `sonic` · `tetris` · `pacman` · `ff`
+[English README](README.md)
 
-所有音效都是**用 Python 标准库现场合成的原创 8-bit 风格片段**（方波），不含任何游戏原作的采样。既无版权风险，也方便你重新生成或自行替换。
+---
 
-## 为什么用插件而不是 `[ui.sound]`
+## 音色包
 
-Herdr 内置的 `[ui.sound]` 配置有两个硬限制：
+| 包名 | 风格 | done | blocked |
+|---|---|---|---|
+| `mario` | 明亮两音大跳 / 经典三音下坠 | 0.39s | 0.67s |
+| `zelda` | 五音上行琶音（「发现秘密」）/ 下行收尾 | 0.68s | 0.93s |
+| `sonic` | 高频急促双点 / 下行刺音带重击 | 0.44s | 0.82s |
+| `tetris` | 急速上行扫音 / 五音小调下行 | 0.39s | 0.84s |
+| `pacman` | 快速交替「waka」/ 十一音半音阶滑落 | 0.34s | 0.86s |
+| `ff` | 号角式琶音 + 高音拉长 / 缓慢低音下行 | 0.78s | 0.90s |
 
-1. 只有 `done` 和 `request` 两个桶——**没有「失败」音**，无法区分成功与异常。
-2. 声音在**本地 client 进程**里播放。如果 Herdr server 跑在远端、而 client 不在那台机器上，你就什么都听不到。
+`herdr-sound list` 可以看到全部包和精确时长。
 
-本插件改用 Herdr 的**事件钩子**：由 **server 侧**的进程直接播放，因此无论有没有 client 附着都能响，并且能读到真实的 `agent_status` 来区分成功与异常。
+> **全部音频均为原创。** 每套包都由 `src/herdr_sound_plugin/gen.py` 用方波现场
+> 合成，音程与节奏都是原创片段，只是借用了某种听感套路。**不含任何游戏原作
+> 采样**，因此整个包可以自由分发。
+
+---
 
 ## 安装
 
-插件自带全部产物，不需要构建。
+需要 Python 3.10+ 和 Herdr 0.9.3+。
 
 ```bash
-git clone git@github.com:ezstack-dev/herdr-sound-plugin.git
-herdr plugin link "$PWD/herdr-sound-plugin"
-herdr plugin list
+# 推荐：用 uv 装成独立工具
+uv tool install herdr-sound
+
+# 或者直接用 pip
+pip install herdr-sound
 ```
 
-`herdr plugin link` 是就地指向该目录，不构建、不复制。请在**跑 Herdr server 的那台机器**上执行一次。
-
-仓库转为公开后，也可以用一条命令安装：
+在发布到 PyPI 之前，可以直接从本仓库安装：
 
 ```bash
-herdr plugin install ezstack-dev/herdr-sound-plugin
+uv tool install --from git+https://github.com/ezstack-dev/herdr-sound-plugin herdr-sound
+# 或者，在本地克隆目录里
+uv tool install .
 ```
 
-> **插件跑在 Herdr server 上，所以声音是在 server 所在的机器上响的。**
-> 如果你的 server 在远端（通过 `herdr --remote` 连接），请装在**跑 server 的那台机器**上，而不是你眼前的 client。
+会同时装上 `herdr-sound` 和简写别名 `hsp`。
 
-### ⚠️ 装完必须关掉内置声音
+---
 
-否则会**双声**：Herdr 内置的 `[ui.sound]` 在 **client** 侧响，本插件在 **server** 侧响，两者互不知情。
-
-编辑 `~/.config/herdr/config.toml`，把整个 `[ui.sound]` 段替换为：
-
-```toml
-[ui.sound]
-enabled = false
-```
-
-然后生效：
+## 用法
 
 ```bash
-herdr server reload-config
+hsp list              # 列出全部音色包，* 标出当前生效的
+hsp use mario         # 切换音色包
+hsp status            # 当前生效的包，以及配置位置
+hsp doctor            # 体检：可执行文件、配置、音效文件
+hsp restore           # 恢复 Herdr 默认（关闭音效、删掉复制进去的文件）
 ```
 
-（也可以只静音 pi agent：`[ui.sound.agents] pi = "off"`。）
+`hsp use <pack>` 做三件事：
 
-## 切换音色包
+1. 把 `done.mp3` / `blocked.mp3` 复制到 `<herdr 配置目录>/sounds/<pack>/`
+2. 把该包写进 `config.toml` 的 `[ui.sound]`
+3. 执行 `herdr server reload-config`，不用重启 herdr 就生效
 
-每个音色包对应一个插件 action：
+它会**原地修改**你的配置文件（保留注释与排版），但事先备份一下仍然是个好习惯。
+
+### 哪个键对应哪个声
+
+| Herdr 配置键 | 触发时机 | 包内文件 |
+|---|---|---|
+| `ui.sound.done_path` | Agent 完成一轮 | `done.mp3` |
+| `ui.sound.request_path` | Agent 需要你介入 | `blocked.mp3` |
+
+### 自定义配置路径
+
+`herdr-sound` 找配置的顺序与 Herdr 一致：
+`$HERDR_CONFIG_PATH` → `$XDG_CONFIG_HOME/herdr/config.toml` →
+`~/.config/herdr/config.toml`。可以用 `HERDR_CONFIG_PATH` 指向别的文件：
 
 ```bash
-herdr plugin action list --plugin mario-sound        # 查看全部音色包
-herdr plugin action invoke mario-sound.use-zelda     # 切到 Zelda 音色
+HERDR_CONFIG_PATH=/tmp/test/config.toml hsp use pacman
 ```
 
-选择结果写入插件的 state 目录，**每次事件触发时都会重新读取**，因此立即生效，无需重启 Herdr。
+---
 
-可以在 `~/.config/herdr/config.toml` 里绑定快捷键：
+## 需要知道的事
 
-```toml
-[[keys.command]]
-key = "prefix+l"
-type = "plugin_action"
-command = "mario-sound.list-sounds"
-```
+**音效在 Herdr 的 *client* 侧播放，不在 server 侧。** Herdr 由附着上来的
+client 进程解析 `[ui.sound]` 并播放。如果你是无界面运行、或者只通过 bridge 附着，
+配置依然是对的 —— 只是在真有 client 附着之前听不到声音。无论哪种情况，
+`hsp doctor` 都会告诉你配置是否有效。
 
-## 验证
+**没有「失败」音效。** Herdr 的 Agent 状态只有
+`idle / working / blocked / done / unknown` —— **没有 `failed`**。崩溃或报错的
+Agent 通常仍以 `done` 收尾，因此会响*完成*音。`blocked` 槽位的语义是「需要你
+关注」，这是 Herdr 能提供的最接近的东西，我们就把「出事了」的音放在这个槽位。
 
-最可靠的方式是用自带的端到端验证脚本：它会新建一个试验 workspace，逐包切换，并核对到底播了哪个文件：
+**`restore` 只删它自己装的东西。** 已知包的 `sounds/<pack>/` 目录会被删除；
+你自己放进 sounds 目录的其他文件不动。
 
-```bash
-task e2e                    # 全部音色包
-task e2e -- --packs mario tetris
-```
-
-输出形如：
-
-```
-✓ mario    status=done     hits= 25  expected sounds/mario/done.mp3
-✓ tetris   status=done     hits= 26  expected sounds/tetris/done.mp3
-```
-
-也可以就跑一个真实的 agent 任务到结束，然后看日志：
-
-```bash
-herdr plugin log list --plugin mario-sound
-# 每次触发都会记一条 status=succeeded
-```
-
-> ⚠️ `herdr pane report-agent` 确实会发出 `pane.agent_status_changed`，但有两个前提：
-> 对**已经在跑 agent 的 pane 会被忽略**（只有一个空 shell pane 才能被强制成 `blocked`），
-> 且**重复上报同一个状态不产生任何事件**——状态必须真的发生*变化*。所以再次强制
-> `blocked` 前要先复位成 `idle`。`done` 完全无法伪造（`--state` 只接受
-> `idle|working|blocked|unknown`），要验证请用 `task e2e`。
-
-## 工作原理
-
-```
-herdr server
-  └─ pane.agent_status_changed 事件
-       └─ notify.sh   （cwd = 插件目录；读 HERDR_PLUGIN_EVENT_JSON）
-            ├─ done    → afplay sounds/<pack>/done.mp3
-            ├─ blocked → afplay sounds/<pack>/blocked.mp3
-            └─ 其他状态 → 静默退出
-
-切换 action
-  └─ switch.sh  → 写入 <state_dir>/pack
-```
-
-`working` / `idle` / `unknown` 都不发声，所以任务刚开始时不会吵你。状态文件缺失或包名不存在时会回退到 `mario`，而不是干脆不响。
-
-### 文件说明
-
-| 文件 | 作用 |
-|---|---|
-| `herdr-plugin.toml` | 插件清单——事件订阅 + 每个音色包一个 action |
-| `notify.sh` | 事件钩子——按 `agent_status` 分支，播放对应 mp3 |
-| `switch.sh` | action 处理器——记录当前选中的音色包 |
-| `sounds/<pack>/done.mp3` | 完成音（6 组） |
-| `sounds/<pack>/blocked.mp3` | 异常音（6 组） |
-| `src/herdr_sound_plugin/` | 生成器与调试工具（见下） |
-| `tests/` | 合成、音色包、清单、shell 行为的单元测试 |
-| `Taskfile.yml` | 全部开发任务（`task --list-all`） |
+---
 
 ## 开发
 
-需要 [`uv`](https://docs.astral.sh/uv/) 和 [`task`](https://taskfile.dev)。
-
 ```bash
-task sync          # 安装依赖
-task test          # 跑单元测试
-task check         # 提交前门禁：测试 + 清单一致性 + 音效同步检查
+task check        # 测试 + 音效同步校验 + wheel 打包校验
+task sounds       # 按 packs.py 里的谱子重新生成全部 mp3
+task list         # 打印包名与时长
 ```
 
-### 重新生成 / 新增音效
+目录结构：
 
-音色包在 `src/herdr_sound_plugin/packs.py` 里以「谱子」形式定义：
-
-```python
-"mario": {
-    "done": [("B5", 0.09), ("E6", 0.30)],
-    "blocked": [("E5", 0.12), ("C5", 0.13), ("G4", 0.42)],
-},
+```
+src/herdr_sound_plugin/
+  cli.py        typer 命令行（list / use / status / doctor / restore / version）
+  config.py     定位、读取、修改 herdr 的 config.toml（tomlkit，保留注释）
+  install.py    复制音效、计算 [ui.sound] 路径、卸载
+  herdr.py      薄封装：找 herdr 可执行文件、reload-config
+  packs.py      谱子表 —— 每个包每种用途一份「乐谱」
+  synth.py      方波合成 -> mp3
+  gen.py        把 packs.py 的谱子写成 sounds/<pack>/<kind>.mp3
+  sounds/       12 个已提交的 mp3，随 wheel 一起分发
+packages/legacy-herdr-plugin/   ⚠️ 旧插件方案的死代码
 ```
 
-改完谱子后：
+`packages/legacy-herdr-plugin/` 是归档，不再使用，且已排除出测试收集。
+想看当年的复盘请读它自己的 README。
 
-```bash
-task sounds        # 重新生成全部 mp3 到 ./sounds
-task list          # 列出音色包、音数、总时长
-task notes PACK=mario
-```
-
-`task check-sounds`（包含在 `task check` 里）会在「已提交的 mp3 与生成器输出不一致」时失败，因此 `packs.py` 里的谱子始终是唯一事实来源——**不要手改 mp3**。
-
-新增一个音色包要改两处：`packs.py` 里加谱子、`herdr-plugin.toml` 里加 `[[actions]]`。有测试专门守住这两者的一致性。
-
-### 调试工具
-
-| 命令 | 作用 |
-|---|---|
-| `task capture -- --seconds 20` | 采样 `afplay`，报告实际播放了哪些文件 |
-| `task e2e` | 起一个试验 workspace/agent，逐个切包并核对真实播放 |
-| `task logs` | 查看插件最近的执行日志 |
-| `task relink` | unlink + link（改过清单后需要） |
-| `uv run python -m herdr_sound_plugin.herdr status w1:p1` | 查某个 pane 的 agent 状态 |
-
-`task capture` 的存在是有原因的：钩子是异步播放的（`nohup afplay &`），进程一闪而过，直接 `ps | grep afplay` 基本抓不到——而且 `grep` 还会匹配到它自己的命令行。采样器用 `pgrep -x afplay` 精确取 pid，再逐个读完整 argv。
-
-## 平台支持与已知边界
-
-- **目前仅支持 macOS**——播放走 `/usr/bin/afplay`。Linux 上把 `notify.sh` 里的 `afplay` 换成 `paplay`/`aplay` 即可（一行）。
-- `blocked` 只覆盖「需要人工介入」的上报（例如 pi-subagents 发出）。**Herdr 没有运行期失败状态**——agent 报错后通常仍以 `done` 收尾，会播完成音。这是 Herdr 状态模型的限制，不是本插件的问题。
-- 需要 Herdr `>= 0.9.3`（引入插件事件 API 的版本）。
-- 清单里的 `command` 是 **argv 数组而非 shell 字符串**，且**相对插件目录解析、不搜 PATH**——所以必须写 `["bash", "notify.sh"]` 而不是 `["notify.sh"]`。
+---
 
 ## 许可
 
-[Apache-2.0](LICENSE)
+Apache-2.0，见 [LICENSE](LICENSE)。

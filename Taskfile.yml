@@ -1,10 +1,9 @@
 version: "3"
 
 # 项目任务入口。`task` 不带参数会列出全部任务。
-# 约定：`task check` 是提交前必跑的门禁（测试 + 清单校验 + 音效同步检查）。
+# 约定：`task check` 是提交前必跑的门禁（测试 + 音效同步 + 打包产物校验）。
 
 vars:
-  PLUGIN_ID: mario-sound
   HERDR: '{{.HERDR | default "herdr"}}'
 
 tasks:
@@ -29,13 +28,13 @@ tasks:
       - uv run python -m herdr_sound_plugin.gen --list
 
   sounds:
-    desc: 重新生成全部音效 mp3 到 ./sounds
+    desc: 重新生成全部音效 mp3 到包内 src/herdr_sound_plugin/sounds
     deps: [sync]
     cmds:
-      - uv run python -m herdr_sound_plugin.gen sounds
+      - uv run python -m herdr_sound_plugin.gen
 
   check-sounds:
-    desc: 校验已提交的 sounds/ 与生成器输出一致（防止手改 mp3）
+    desc: 校验已提交的 mp3 与生成器输出一致（防止手改音频）
     deps: [sync]
     cmds:
       - uv run pytest tests/test_gen.py -q
@@ -48,70 +47,62 @@ tasks:
     cmds:
       - uv run pytest -q
 
+  build:
+    desc: 构建 wheel / sdist，并确认音效文件被打进产物
+    deps: [sync]
+    cmds:
+      - rm -rf dist
+      - uv build
+      - |
+        uv run python - <<'EOF'
+        import glob, zipfile
+        wheel = sorted(glob.glob("dist/*.whl"))[-1]
+        names = zipfile.ZipFile(wheel).namelist()
+        sounds = [n for n in names if n.endswith(".mp3")]
+        assert sounds, f"{wheel} 里没有音效文件，PyPI 发布后用户将无音可播"
+        assert len(sounds) == 12, f"预期 12 个 mp3（6 包 × 2 类），实际 {len(sounds)}"
+        print(f"{wheel}: {len(sounds)} 个 mp3 已打包")
+        EOF
+
   check:
-    desc: 提交前门禁：测试 + 清单一致性 + 音效同步
-    deps: [test]
+    desc: 提交前门禁：测试 + 音效同步 + 打包校验
     cmds:
-      - uv run python -c "import tomllib,pathlib;m=tomllib.loads(pathlib.Path('herdr-plugin.toml').read_text());print('manifest ok:', m['id'], m['version'])"
+      - task: test
       - task: check-sounds
+      - task: build
 
-  # ---------------------------------------------------------------- 插件
-
-  link:
-    desc: 把本仓库作为本地插件 link 进 herdr
-    cmds:
-      - '{{.HERDR}} plugin link "{{.ROOT_DIR}}"'
-      - '{{.HERDR}} plugin list'
-
-  unlink:
-    desc: 从 herdr 卸载本插件
-    cmds:
-      - '{{.HERDR}} plugin unlink {{.PLUGIN_ID}}'
-
-  relink:
-    desc: 改动清单后刷新插件（unlink + link）
-    cmds:
-      - task: unlink
-      - task: link
-
-  packs:
-    desc: 列出插件在当前 herdr 里注册的音色包 action
-    cmds:
-      - '{{.HERDR}} plugin action list --plugin {{.PLUGIN_ID}}'
+  # ---------------------------------------------------------------- CLI
 
   use:
     desc: 切换音色包（示例：task use PACK=zelda）
     requires:
       vars: [PACK]
-    cmds:
-      - '{{.HERDR}} plugin action invoke {{.PLUGIN_ID}}.use-{{.PACK}}'
-
-  logs:
-    desc: 查看插件最近的执行日志
-    cmds:
-      - '{{.HERDR}} plugin log list --plugin {{.PLUGIN_ID}}'
-
-  # ---------------------------------------------------------------- 调试
-
-  capture:
-    desc: 采样 afplay 播放记录（示例：task capture -- --seconds 20）
     deps: [sync]
     cmds:
-      - uv run python -m herdr_sound_plugin.capture {{.CLI_ARGS}}
+      - uv run herdr-sound use {{.PACK}}
 
-  e2e:
-    desc: >-
-      End-to-end check that each sound pack really plays (needs herdr running).
-      NOTE: starts a real pi agent in a throwaway workspace and moves afplay
-      sampling; the blocked pass leaves a non-real blocked state behind.
-      Throwaway workspace only.
+  status:
+    desc: 查看当前生效的音色包
     deps: [sync]
     cmds:
-      - uv run python -m herdr_sound_plugin.e2e {{.CLI_ARGS}}
+      - uv run herdr-sound status
 
-  notes:
-    desc: 查看某个包已提交音效的时长（示例：task notes PACK=mario）
-    requires:
-      vars: [PACK]
+  doctor:
+    desc: 体检 herdr 环境与音效文件
+    deps: [sync]
     cmds:
-      - uv run python -c "from herdr_sound_plugin import packs,synth; [print(k, f'{synth.duration(synth.render(packs.notes_of(\"{{.PACK}}\",k))):.2f}s', packs.notes_of('{{.PACK}}',k)) for k in packs.KINDS]"
+      - uv run herdr-sound doctor
+
+  restore:
+    desc: 恢复 herdr 默认（关闭音效、删除已 copy 的音色包）
+    deps: [sync]
+    cmds:
+      - uv run herdr-sound restore --yes
+
+  # ---------------------------------------------------------------- 归档
+
+  legacy:
+    desc: 列出已失效的归档代码（插件方案，勿用）
+    silent: true
+    cmds:
+      - find packages/legacy-herdr-plugin -type f -not -path '*/.git/*' | sort
